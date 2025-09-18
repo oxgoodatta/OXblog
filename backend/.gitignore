@@ -1,0 +1,43 @@
+# Python cache & compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment files
+.env
+*.env
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# Flask instance folder (contains config, DB, secrets)
+instance/
+*.db
+*.sqlite3
+
+# Logs
+*.log
+
+# PyCharm / VSCode / IDE specific files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Node.js / frontend build (if using React in same repo)
+node_modules/
+build/
+dist/
+npm-debug.log*
+yarn-error.log*
+
+# Coverage / testing
+htmlcov/
+.coverage
+.tox/
+pytest_cache/
