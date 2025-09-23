@@ -200,7 +200,7 @@ def get_comment_thread(comment_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Update the get_posts route to include comment count
+# Update the get_posts route to include comment count..............//..
 @main_bp.route('/posts', methods=['GET'])
 def get_posts():
     try:
@@ -213,8 +213,8 @@ def get_posts():
         
         posts_data = []
         for post in posts.items:
-            # Calculate total comments including replies
             total_comments = Comment.query.filter_by(post_id=post.id).count()
+            top_level_comments_count = Comment.query.filter_by(post_id=post.id, parent_id=None).count()
             
             posts_data.append({
                 'id': post.id,
@@ -225,8 +225,8 @@ def get_posts():
                     'username': post.author.username
                 },
                 'likes_count': len(post.likes),
-                'comments_count': total_comments,  # Total comments including replies
-                'top_level_comments_count': len(post.comments.filter_by(parent_id=None).all()),
+                'comments_count': total_comments,
+                'top_level_comments_count': top_level_comments_count,
                 'user_has_liked': False
             })
         
@@ -239,4 +239,46 @@ def get_posts():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+    
+
+# ==========================
+# Update Comment
+# ==========================
+@main_bp.route('/comments/<int:comment_id>', methods=['PUT'])
+@jwt_required()
+def update_comment(comment_id):
+    user_id = get_jwt_identity()
+    data = request.get_json()
+
+    comment = Comment.query.get_or_404(comment_id)
+
+    # Only the owner can update
+    if comment.user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    comment.content = data.get('content', comment.content)
+    db.session.commit()
+
+    return jsonify({"message": "Comment updated successfully"}), 200
+
+
+# ==========================
+# Delete Comment
+# ==========================
+@main_bp.route('/comments/<int:comment_id>', methods=['DELETE'])
+@jwt_required()
+def delete_comment(comment_id):
+    user_id = get_jwt_identity()
+    comment = Comment.query.get_or_404(comment_id)
+
+    # Only the owner can delete
+    if comment.user_id != user_id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    db.session.delete(comment)
+    db.session.commit()
+
+    return jsonify({"message": "Comment deleted successfully"}), 200
+
     

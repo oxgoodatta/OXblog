@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import Home from './pages/Home';
@@ -39,49 +39,60 @@ const PublicRoute = ({ children }) => {
   return !user ? children : <Navigate to="/" />;
 };
 
+// ✅ Separate component that lives inside <Router>
+function AppContent() {
+  const location = useLocation();
+
+  // Hide navbar on login & register
+  const hideNavbar = ["/login", "/register"].includes(location.pathname);
+
+  return (
+    <div className="h-screen flex w-full bg-amber-200">
+      {!hideNavbar && <Navbar />}
+      <main className='max-w-full bg-gradient-to-br from-pink-200 via-peach-200 via-blue-200 to-purple-200bg-gradient-to-br from-pink-200 via-orange-200 via-blue-200 to-purple-200 h-screen flex-grow overflow-auto'>
+        <Routes>
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Home />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/login" element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } />
+          
+          <Route path="/register" element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          } />
+          
+          <Route path="/profile" element={
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/post/:id" element={
+            <ProtectedRoute>
+              <PostDetail />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <div class="mx-auto flex  w-full">
-          <Navbar />
-          
-          <main>
-            <Routes>
-              <Route path="/" element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/login" element={
-                <PublicRoute>
-                  <Login />
-                </PublicRoute>
-              } />
-              
-              <Route path="/register" element={
-                <PublicRoute>
-                  <Register />
-                </PublicRoute>
-              } />
-              
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="/post/:id" element={
-                <ProtectedRoute>
-                  <PostDetail />
-                </ProtectedRoute>
-              } />
-              
-              <Route path="*" element={<Navigate to="/" />} />
-            </Routes>
-          </main>
-        </div>
+        <AppContent />
       </Router>
     </AuthProvider>
   );

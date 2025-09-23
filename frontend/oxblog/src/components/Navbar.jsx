@@ -18,7 +18,7 @@ const Navbar = () => {
           {/* Logo */}
           <Link to="/" className="flex-shrink-0 flex items-center">
             <div class="w-12 h-12 flex items-center justify-center  overflow-hidden">
-                <img src="/OXBLOGLOGO.png" class="object-contain" />
+                <img src="/OXBLOGLOGO.png" className="object-contain" />
             </div>
           </Link>
 
