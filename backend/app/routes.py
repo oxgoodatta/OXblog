@@ -21,13 +21,19 @@ def create_post():
         post = Post(content=content.strip(), user_id=user_id)
         db.session.add(post)
         db.session.commit()
+
+        author = post.author
         
         return jsonify({
             'message': 'Post created successfully',
             'post': {
                 'id': post.id,
                 'content': post.content,
-                'created_at': post.created_at.isoformat()
+                'created_at': post.created_at.isoformat(),
+                'author': {
+                    'id': author.id,
+                    'username': author.username
+                },
             }
         }), 201
         
