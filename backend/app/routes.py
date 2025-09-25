@@ -47,7 +47,7 @@ def delete_post(post_id):
         user_id = get_jwt_identity()
         post = Post.query.get_or_404(post_id)
         
-        if post.user_id != user_id:
+        if post.user_id != int(user_id):
             return jsonify({'error': 'Unauthorized'}), 403
         
         db.session.delete(post)
@@ -279,7 +279,7 @@ def delete_comment(comment_id):
     comment = Comment.query.get_or_404(comment_id)
 
     # Only the owner can delete
-    if comment.user_id != user_id:
+    if comment.user_id != str(user_id):
         return jsonify({"error": "Unauthorized"}), 403
 
     db.session.delete(comment)
