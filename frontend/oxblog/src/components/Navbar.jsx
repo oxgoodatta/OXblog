@@ -1,111 +1,109 @@
 import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
+  // Check if current path matches for active styling
+  const isActive = (path) => location.pathname === path;
+
   return (
     <nav className="bg-gray-100 w-16 h-screen items-center flex flex-col shadow-lg border-b">
-      <div className="w-full  h-full">
-        <div className="flex  justify-between items-center flex-col h-full ">
+      <div className="w-full h-full">
+        <div className="flex justify-between items-center flex-col h-full py-4">
           {/* Logo */}
           <Link to="/" className="flex-shrink-0 flex items-center">
-            <div class="w-12 h-12 flex items-center justify-center  overflow-hidden">
-                <img src="/OXBLOGLOGO.png" className="object-contain" />
+            <div className="w-12 h-12 flex items-center justify-center overflow-hidden">
+              <img src="/OXBLOGLOGO.png" className="object-contain" alt="OXBlog Logo" />
             </div>
           </Link>
 
           {/* Navigation Links */}
-          <div className="flex flex-col w-full  md:flex justify-between items-center ">
+          <div className="flex flex-col w-full justify-between items-center space-y-6">
             <Link
-              to="/"
-              className="text-gray-700  hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              to="/search"
+              className={`p-2 rounded-md transition-colors duration-200 ${
+                isActive('/search') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+              }`}
             >
-              <img src="/icons8-search-50.png" alt="Search" className='w-8 h-8' />
+              <img src="/icons8-search-50.png" alt="Search" className='w-6 h-6' />
             </Link>
             
             <Link
               to="/"
-              className="text-gray-700  hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              className={`p-2 rounded-md transition-colors duration-200 ${
+                isActive('/') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+              }`}
             >
-              <img src="/icons8-home-48.png" alt="Home" className='w-8 h-8'/>
+              <img src="/icons8-home-48.png" alt="Home" className='w-6 h-6'/>
             </Link>
+
             <Link
-              to="/"
-              className="text-gray-700  hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              to="/create-post"
+              className={`p-2 rounded-md transition-colors duration-200 ${
+                isActive('/create-post') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+              }`}
             >
-              <img src="/icons8-plus-64.png" alt="Home" className='w-8 h-8'/>
+              <img src="/icons8-plus-64.png" alt="Create Post" className='w-6 h-6'/>
             </Link>
+
             <Link
-              to="/"
-              className="text-gray-700  hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              to="/notifications"
+              className={`p-2 rounded-md transition-colors duration-200 ${
+                isActive('/notifications') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+              }`}
             >
-              <img src="/icons8-notification-48.png" alt="Home" className='w-8 h-8'/>
+              <img src="/icons8-notification-48.png" alt="Notifications" className='w-6 h-6'/>
             </Link>
+
             <Link
-              to="/"
-              className="text-gray-700  hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+              to="/profile"
+              className={`p-2 rounded-md transition-colors duration-200 ${
+                isActive('/profile') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+              }`}
             >
-              <img src="/icons8-profile-64.png" alt="Home" className='w-8 h-8'/>
+              <img src="/icons8-profile-64.png" alt="Profile" className='w-6 h-6'/>
             </Link>
-            
-            {user && (
-              <Link
-                to="/profile"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-              >
-                Profile
-              </Link>
-            )}
           </div>
 
-          {/* Auth Section */}
-          {/*
-          <div className="flex items-center space-x-4">
+          {/* Bottom Section - Logout */}
+          <div className="flex flex-col items-center space-y-4">
             {user ? (
-              <>
-                <span className="text-gray-700 text-sm">
-                  Welcome, <strong>@{user.username}</strong>
-                </span>
-                <button
-                  onClick={handleLogout}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                >
-                  Logout
-                </button>
-              </>
+              <button
+                onClick={handleLogout}
+                className="p-2 rounded-md text-gray-700 hover:text-red-600 hover:bg-red-50 transition-colors duration-200"
+                title="Logout"
+              >
+                <img src="/icons8-logout-64.png" alt="Logout" className='w-6 h-6'/>
+              </button>
             ) : (
-              <div className="flex space-x-2">
+              <div className="flex flex-col space-y-2">
                 <Link
                   to="/login"
-                  className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
+                  className={`p-2 rounded-md transition-colors duration-200 ${
+                    isActive('/login') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+                  }`}
                 >
-                  Login
+                  <img src="/icons8-login-64.png" alt="Login" className='w-6 h-6'/>
                 </Link>
                 <Link
                   to="/register"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+                  className={`p-2 rounded-md transition-colors duration-200 ${
+                    isActive('/register') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+                  }`}
                 >
-                  Register
+                  <img src="/icons8-register-64.png" alt="Register" className='w-6 h-6'/>
                 </Link>
               </div>
             )}
-          </div>
-          */}
-          <div className="flex items-center space-x-4">
-           <Link
-              to="/"
-              className="text-gray-700  hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium"
-            >
-              <img src="/icons8-logout-64.png" alt="Home" className='w-8 h-8'/>
-            </Link>
           </div>
         </div>
       </div>
