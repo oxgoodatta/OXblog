@@ -61,7 +61,7 @@ const PostCard = ({ post, onDeleteClick }) => {
   return (
     <Link to={`/post/${postId}`} className="block hover:bg-gray-50 transition-colors duration-200">
       <div className='bg-gradient-to-r from-blue-50/50 to-transparent rounded-2xl p-2'>
-        <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-2 max-w-full w-fit mx-auto">
+        <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border  border-gray-100 p-2 max-w-full  mx-auto">
           <div className="flex justify-between items-start mb-3 gap-4">
             <div className="min-w-0 flex-1">
               <h3 className="font-semibold text-blue-600 truncate">@{authorName}</h3>

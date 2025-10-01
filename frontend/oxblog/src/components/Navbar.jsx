@@ -15,6 +15,12 @@ const Navbar = () => {
   // Check if current path matches for active styling
   const isActive = (path) => location.pathname === path;
 
+  // Handle create post click - navigate to home with focus parameter
+  const handleCreatePostClick = (e) => {
+    e.preventDefault();
+    navigate('/?focus=create-post');
+  };
+
   return (
     <nav className="bg-gray-100 w-16 h-screen items-center flex flex-col shadow-lg border-b">
       <div className="w-full h-full">
@@ -46,14 +52,28 @@ const Navbar = () => {
               <img src="/icons8-home-48.png" alt="Home" className='w-6 h-6'/>
             </Link>
 
-            <Link
-              to="/create-post"
-              className={`p-2 rounded-md transition-colors duration-200 ${
-                isActive('/create-post') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
-              }`}
-            >
-              <img src="/icons8-plus-64.png" alt="Create Post" className='w-6 h-6'/>
-            </Link>
+            {/* Updated Create Post Link */}
+            {user ? (
+              <button
+                onClick={handleCreatePostClick}
+                className={`p-2 rounded-md transition-colors duration-200 ${
+                  location.pathname === '/' && location.search.includes('focus=create-post') 
+                    ? 'bg-blue-100 text-blue-600' 
+                    : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+                }`}
+                title="Create Post"
+              >
+                <img src="/icons8-plus-64.png" alt="Create Post" className='w-6 h-6'/>
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="p-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-200 transition-colors duration-200"
+                title="Login to create post"
+              >
+                <img src="/icons8-plus-64.png" alt="Create Post" className='w-6 h-6'/>
+              </Link>
+            )}
 
             <Link
               to="/notifications"

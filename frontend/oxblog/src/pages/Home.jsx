@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom'; // Add this import
+import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
 import DeleteModal from '../components/DeleteModal';
@@ -11,7 +11,7 @@ const Home = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [searchParams, setSearchParams] = useSearchParams(); // Add this
+  const [searchParams, setSearchParams] = useSearchParams();
   const [totalPages, setTotalPages] = useState(1);
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
@@ -19,19 +19,55 @@ const Home = () => {
     isDeleting: false
   });
   const { user } = useAuth();
+  
+  // Create a ref for the PostForm
+  const postFormRef = useRef(null);
 
   // Get current page from URL or default to 1
   const currentPage = parseInt(searchParams.get('page')) || 1;
+  // Get focus parameter
+  const focusParam = searchParams.get('focus');
 
   useEffect(() => {
     fetchPosts();
-  }, [currentPage]); // Now depends on currentPage from URL
+  }, [currentPage]);
+
+  // Effect to handle focusing on the post form
+  useEffect(() => {
+    if (focusParam === 'create-post' && user && postFormRef.current) {
+      // Small timeout to ensure the component is fully rendered
+      setTimeout(() => {
+        const titleInput = postFormRef.current?.querySelector('input[type="text"]');
+        const textarea = postFormRef.current?.querySelector('textarea');
+        
+        if (titleInput) {
+          titleInput.focus();
+          // Scroll the form into view
+          postFormRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        } else if (textarea) {
+          textarea.focus();
+          postFormRef.current.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }
+        
+        // Remove the focus parameter from URL after focusing
+        const newSearchParams = new URLSearchParams(searchParams);
+        newSearchParams.delete('focus');
+        setSearchParams(newSearchParams);
+      }, 100);
+    }
+  }, [focusParam, user, searchParams, setSearchParams]);
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await postsAPI.getPosts(currentPage); // Use currentPage from URL
+      const response = await postsAPI.getPosts(currentPage);
       
       // Handle different response structures
       let postsData = [];
@@ -251,7 +287,10 @@ const Home = () => {
         <div className="lg:w-2/5 xl:w-1/3">
           {user && (
             <div className="sticky top-1 space-y-6">
-              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm">
+              <div 
+                ref={postFormRef}
+                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-2xl p-6 border border-blue-100 shadow-sm"
+              >
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">

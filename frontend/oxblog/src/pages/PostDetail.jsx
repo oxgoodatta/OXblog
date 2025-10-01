@@ -82,10 +82,10 @@ const PostDetail = () => {
       <div className={`${shouldIndent ? 'ml-12' : ''}`}>
         {/* Comment Card */}
         <div className={`
-          relative mb-4 transition-all duration-300 hover:scale-[1.02]
+          relative mb-4 transition-all duration-300 
           ${isReply 
-            ? 'bg-gradient-to-r from-blue-50/50 to-transparent rounded-2xl p-2' 
-            : 'bg-gradient-to-r from-blue-50/50 to-transparent rounded-2xl p-2'
+            ? '' 
+            : ''
           }
         `}>
           {/* Main comment content */}
@@ -223,12 +223,14 @@ const PostDetail = () => {
       </Link>
 
       {/* Post Card */}
-      <div className="mb-8 transform hover:scale-[1.01] transition-transform duration-300">
-        <PostCard post={post} onDeleteClick={() => {}} />
+      <div className="mb-8  flex  justify-center transform hover:scale-[1.01] transition-transform duration-300">
+        <div className='w-full'>
+          <PostCard post={post} onDeleteClick={() => {}} />
+        </div>
       </div>
 
       {/* Comments Section */}
-      <div className="mb-8">
+      <div className="mb-8 ">
         {/* Comments Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
