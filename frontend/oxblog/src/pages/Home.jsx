@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom'; // Add this import
 import PostCard from '../components/PostCard';
 import PostForm from '../components/PostForm';
+import DeleteModal from '../components/DeleteModal';
 import ErrorBoundary from '../components/ErrorBoundary';
 import { postsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -9,19 +11,27 @@ const Home = () => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams(); // Add this
   const [totalPages, setTotalPages] = useState(1);
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    postId: null,
+    isDeleting: false
+  });
   const { user } = useAuth();
+
+  // Get current page from URL or default to 1
+  const currentPage = parseInt(searchParams.get('page')) || 1;
 
   useEffect(() => {
     fetchPosts();
-  }, [currentPage]);
+  }, [currentPage]); // Now depends on currentPage from URL
 
   const fetchPosts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await postsAPI.getPosts(currentPage);
+      const response = await postsAPI.getPosts(currentPage); // Use currentPage from URL
       
       // Handle different response structures
       let postsData = [];
@@ -55,6 +65,45 @@ const Home = () => {
 
   const handlePostDeleted = (postId) => {
     setPosts(prev => prev.filter(post => post.id !== postId));
+  };
+
+  const handleDeleteClick = (postId) => {
+    setDeleteModal({
+      isOpen: true,
+      postId: postId,
+      isDeleting: false
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleteModal(prev => ({ ...prev, isDeleting: true }));
+    
+    try {
+      await postsAPI.deletePost(deleteModal.postId);
+      handlePostDeleted(deleteModal.postId);
+      setDeleteModal({
+        isOpen: false,
+        postId: null,
+        isDeleting: false
+      });
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete post. Please try again.');
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }));
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteModal({
+      isOpen: false,
+      postId: null,
+      isDeleting: false
+    });
+  };
+
+  // Update page change handler to update URL
+  const handlePageChange = (newPage) => {
+    setSearchParams({ page: newPage.toString() });
   };
 
   if (loading) {
@@ -131,10 +180,10 @@ const Home = () => {
               ) : (
                 posts.map(post => (
                   <ErrorBoundary key={post.id}>
-                    <div className="bg-black max-w-fit rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden transform hover:-translate-y-0.5">
+                    <div className=" rounded-2xl  max-w-fit rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 overflow-hidden transform hover:-translate-y-0.5">
                       <PostCard
                         post={post}
-                        onDelete={handlePostDeleted}
+                        onDeleteClick={handleDeleteClick}
                       />
                     </div>
                   </ErrorBoundary>
@@ -142,12 +191,12 @@ const Home = () => {
               )}
             </div>
 
-            {/* Pagination - Now properly under posts */}
+            {/* Pagination - Updated to use handlePageChange */}
             {totalPages > 1 && (
               <div className="mt-8 bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                 <div className="flex justify-center items-center space-x-3">
                   <button
-                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                     disabled={currentPage === 1}
                     className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl disabled:opacity-50 hover:bg-gray-200 transition-all duration-200 font-medium flex items-center space-x-2"
                   >
@@ -171,7 +220,7 @@ const Home = () => {
                       return (
                         <button
                           key={pageNum}
-                          onClick={() => setCurrentPage(pageNum)}
+                          onClick={() => handlePageChange(pageNum)}
                           className={`px-4 py-2.5 rounded-xl transition-all duration-200 font-medium min-w-[44px] ${
                             currentPage === pageNum
                               ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg transform scale-105'
@@ -185,7 +234,7 @@ const Home = () => {
                   </div>
                   
                   <button
-                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl disabled:opacity-50 hover:bg-gray-200 transition-all duration-200 font-medium flex items-center space-x-2"
                   >
@@ -248,6 +297,14 @@ const Home = () => {
           )}
         </div>
       </div>
+
+      {/* Single Delete Modal for the entire page */}
+      <DeleteModal
+        isOpen={deleteModal.isOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isDeleting={deleteModal.isDeleting}
+      />
     </div>
   );
 };

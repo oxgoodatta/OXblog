@@ -1,71 +1,90 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { commentsAPI } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
-const CommentForm = ({ postId, parentId, onCommentAdded, placeholder = "Write a comment...", buttonText = "Comment" }) => {
+const CommentForm = ({ postId, parentId = null, onCommentAdded, replyingTo = null, onCancelReply }) => {
   const [content, setContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { user } = useAuth();
+  const inputRef = useRef(null);
+
+  // Focus the input field when replyingTo changes
+  useEffect(() => {
+    if (replyingTo && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [replyingTo]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!content.trim() || !user) return;
+    
+    if (!content.trim()) return;
 
     setIsSubmitting(true);
     try {
-      const commentData = { content: content.trim() };
-      if (parentId) {
-        commentData.parent_id = parentId;
-      }
-
-      const response = await commentsAPI.createComment(postId, commentData);
+      const response = await commentsAPI.createComment(postId, {
+        content: content.trim(),
+        parent_id: parentId
+      });
+      
       onCommentAdded(response.data.comment);
       setContent('');
     } catch (error) {
-      console.error('Comment error:', error);
+      console.error('Error creating comment:', error);
+      alert('Failed to post comment. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (!user) {
-    return (
-      <div className="bg-gray-50 rounded-lg p-4 text-center">
-        <p className="text-gray-600">Please login to comment</p>
-      </div>
-    );
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="mb-6">
-      <div className="flex space-x-4">
-        <div className="flex-shrink-0">
-          <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-semibold">
-            {user.username.charAt(0).toUpperCase()}
-          </div>
+    <div className="bg-white rounded-lg">
+      {/* Reply Header */}
+      {replyingTo && (
+        <div className="flex items-center justify-between mb-3 p-3 bg-blue-50 rounded-lg">
+          <span className="text-sm text-blue-700">
+            Replying to <strong>@{replyingTo.author?.username}</strong>
+          </span>
+          <button
+            onClick={onCancelReply}
+            className="text-sm text-gray-500 hover:text-gray-700 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+          >
+            Cancel
+          </button>
         </div>
-        
+      )}
+      
+      <form onSubmit={handleSubmit} className="flex gap-3">
         <div className="flex-1">
-          <textarea
+          <input
+            ref={inputRef}
+            type="text"
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder={placeholder}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-            rows="3"
+            placeholder={replyingTo ? `Reply to @${replyingTo.author?.username}...` : "Write a comment..."}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:outline-none transition-colors"
+            required
           />
-          
-          <div className="mt-2 flex justify-end">
-            <button
-              type="submit"
-              disabled={isSubmitting || !content.trim()}
-              className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg font-medium"
-            >
-              {isSubmitting ? 'Posting...' : buttonText}
-            </button>
-          </div>
         </div>
-      </div>
-    </form>
+        
+        <div className="flex gap-2">
+          {replyingTo && (
+            <button
+              type="button"
+              onClick={onCancelReply}
+              className="px-4 py-3 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors whitespace-nowrap"
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="submit"
+            disabled={isSubmitting || !content.trim()}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap font-medium"
+          >
+            {isSubmitting ? 'Posting...' : 'Post'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 

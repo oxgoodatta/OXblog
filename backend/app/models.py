@@ -1,6 +1,7 @@
 from . import db
 from datetime import datetime
 import bcrypt
+from typing import List, Dict, Any, Optional
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -11,10 +12,10 @@ class User(db.Model):
     posts = db.relationship('Post', backref='author', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('Comment', backref='author', lazy=True, cascade='all, delete-orphan')
     
-    def set_password(self, password):
+    def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
-    def check_password(self, password):
+    def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
 class Post(db.Model):
@@ -39,12 +40,26 @@ class Comment(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)  # For threading
-    replies = db.relationship('Comment', backref=db.backref('parent', remote_side=[id]), 
-                             lazy=True, cascade='all, delete-orphan')
+    parent_id = db.Column(db.Integer, db.ForeignKey('comment.id'), nullable=True)
     
-    def to_dict(self, include_replies=False, depth=0):
-        """Convert comment to dictionary, optionally including nested replies"""
+    # Relationship for replies
+    replies = db.relationship(
+        'Comment', 
+        backref=db.backref('parent', remote_side=[id]), 
+        lazy=True, 
+        cascade='all, delete-orphan'
+    )
+    
+    def to_dict(self, include_replies: bool = False) -> Dict[str, Any]:
+        """
+        Convert comment to dictionary
+        
+        Args:
+            include_replies: Whether to include nested replies
+            
+        Returns:
+            Dictionary representation of the comment
+        """
         data = {
             'id': self.id,
             'content': self.content,
@@ -55,23 +70,26 @@ class Comment(db.Model):
             'author': {
                 'id': self.author.id,
                 'username': self.author.username
-            },
-            'depth': depth,
-            'reply_count': len(self.replies)
+            }
         }
         
+        # Add parent author info for replies
+        if self.parent_id and self.parent:
+            data['parent_author'] = self.parent.author.username
+        
+        # Include replies if requested
         if include_replies:
-            # Recursively include replies (limit depth to avoid infinite recursion)
-            if depth < 5:  # Safety limit
-                data['replies'] = [reply.to_dict(include_replies=True, depth=depth+1) 
-                                  for reply in self.replies]
-            else:
-                data['replies'] = []
+            data['replies'] = [reply.to_dict(include_replies=True) for reply in self.replies]
         
         return data
     
-    def get_reply_count(self):
-        """Get total number of replies (including nested ones)"""
+    def get_reply_count(self) -> int:
+        """
+        Get total number of replies (including nested ones)
+        
+        Returns:
+            Total number of replies
+        """
         count = len(self.replies)
         for reply in self.replies:
             count += reply.get_reply_count()

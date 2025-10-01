@@ -1,13 +1,20 @@
-import React, { useState } from 'react';
-import { likesAPI, postsAPI } from '../services/api';
+import React, { useState, useEffect } from 'react'; // Added useEffect import
+import { likesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 
-const PostCard = ({ post, onDelete }) => {
+const PostCard = ({ post, onDeleteClick }) => {
   const { user } = useAuth();
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
-  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Add this useEffect to sync with post data on refresh
+  useEffect(() => {
+    if (post) {
+      setIsLiked(post.is_liked || false);
+      setLikesCount(post.likes_count || 0);
+    }
+  }, [post?.is_liked, post?.likes_count]); // This will update when post data changes
 
   // Safe access to post properties with fallbacks
   const safePost = post || {};
@@ -23,6 +30,12 @@ const PostCard = ({ post, onDelete }) => {
     e.preventDefault();
     e.stopPropagation();
     
+    if (!user) {
+      // Optional: redirect to login or show message
+      alert('Please login to like posts');
+      return;
+    }
+    
     try {
       const response = await likesAPI.likePost(postId);
       setIsLiked(response.data.liked);
@@ -32,23 +45,11 @@ const PostCard = ({ post, onDelete }) => {
     }
   };
 
-  const handleDelete = async (e) => {
+  const handleDeleteClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      setIsDeleting(true);
-      try {
-        await postsAPI.deletePost(postId);
-        if (onDelete) {
-          onDelete(postId);
-        }
-      } catch (error) {
-        console.error('Delete error:', error);
-        alert('Failed to delete post. Please try again.');
-      } finally {
-        setIsDeleting(false);
-      }
+    if (onDeleteClick) {
+      onDeleteClick(postId);
     }
   };
 
@@ -59,46 +60,47 @@ const PostCard = ({ post, onDelete }) => {
 
   return (
     <Link to={`/post/${postId}`} className="block hover:bg-gray-50 transition-colors duration-200">
-      <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-3 max-w-full w-fit mx-auto">
-        <div className="flex justify-between items-start mb-3 gap-4">
-          <div className="min-w-0 flex-1">
-            <h3 className="font-semibold text-blue-600 truncate">@{authorName}</h3>
-            <p className="text-xs text-gray-500 mt-1">
-              {createdAt}
+      <div className='bg-gradient-to-r from-blue-50/50 to-transparent rounded-2xl p-2'>
+        <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-2 max-w-full w-fit mx-auto">
+          <div className="flex justify-between items-start mb-3 gap-4">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-blue-600 truncate">@{authorName}</h3>
+              <p className="text-[10px] text-gray-500 ml-1">
+                {createdAt}
+              </p>
+            </div>
+            
+            {user && user.id === authorId && (
+              <button
+                onClick={handleDeleteClick}
+                className="text-red-500 hover:text-red-700 text-sm whitespace-nowrap flex-shrink-0 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+
+          <div className="mb-1">
+            <p className="text-gray-800 text-[14px] whitespace-pre-line break-words leading-relaxed">
+              {content}
             </p>
           </div>
-          
-          {user && user.id === authorId && (
+
+          <div className="flex items-center space-x-6 text-gray-600 pt-1 border-t border-gray-100">
             <button
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="text-red-500 hover:text-red-700 text-sm disabled:opacity-50 whitespace-nowrap flex-shrink-0 px-2 py-1 rounded-md hover:bg-red-50 transition-colors"
+              onClick={handleLike}
+              className={`flex items-center space-x-2 transition-colors duration-200 ${
+                isLiked ? 'text-red-500' : 'hover:text-red-500'
+              }`}
             >
-              {isDeleting ? 'Deleting...' : 'Delete'}
+              <span className="text-sm">{isLiked ? '❤️' : '🤍'}</span>
+              <span className="text-xs font-medium">{likesCount}</span>
             </button>
-          )}
-        </div>
 
-        <div className="mb-4">
-          <p className="text-gray-800 whitespace-pre-line break-words leading-relaxed">
-            {content}
-          </p>
-        </div>
-
-        <div className="flex items-center space-x-6 text-gray-600 pt-2 border-t border-gray-100">
-          <button
-            onClick={handleLike}
-            className={`flex items-center space-x-2 transition-colors duration-200 ${
-              isLiked ? 'text-red-500' : 'hover:text-red-500'
-            }`}
-          >
-            <span className="text-lg">{isLiked ? '❤️' : '🤍'}</span>
-            <span className="text-sm font-medium">{likesCount}</span>
-          </button>
-
-          <div className="flex items-center space-x-2 text-gray-600">
-            <span className="text-lg">💬</span>
-            <span className="text-sm font-medium">{commentsCount}</span>
+            <div className="flex items-center space-x-2 text-gray-600">
+              <span className="text-sm">💬</span>
+              <span className="text-xs font-medium">{commentsCount}</span>
+            </div>
           </div>
         </div>
       </div>

@@ -106,26 +106,42 @@ def get_user_profile(username):
 @main_bp.route('/posts/<int:post_id>/comments', methods=['GET'])
 def get_post_comments(post_id):
     try:
+        # Check if post exists
         post = Post.query.get_or_404(post_id)
         
-        # Get top-level comments (no parent)
-        top_level_comments = Comment.query.filter_by(
-            post_id=post_id, 
-            parent_id=None
-        ).order_by(Comment.created_at.asc()).all()
+        # Get ALL comments for this post
+        all_comments = Comment.query.filter_by(post_id=post_id)\
+            .order_by(Comment.created_at.asc())\
+            .all()
         
-        # Include nested replies
-        include_replies = request.args.get('include_replies', 'true').lower() == 'true'
-        comments_data = [comment.to_dict(include_replies=include_replies) for comment in top_level_comments]
+        # Convert to dictionary - use simple to_dict without replies
+        comments_data = []
+        for comment in all_comments:
+            try:
+                comment_dict = comment.to_dict()
+                comments_data.append(comment_dict)
+            except Exception as e:
+                print(f"Error converting comment {comment.id} to dict: {e}")
+                # Add basic comment data even if conversion fails
+                comments_data.append({
+                    'id': comment.id,
+                    'content': comment.content,
+                    'created_at': comment.created_at.isoformat(),
+                    'user_id': comment.user_id,
+                    'post_id': comment.post_id,
+                    'parent_id': comment.parent_id,
+                    'author': {'username': 'Unknown'}
+                })
         
         return jsonify({
             'comments': comments_data,
-            'total_comments': Comment.query.filter_by(post_id=post_id).count(),
-            'total_top_level_comments': len(top_level_comments)
+            'total_comments': len(all_comments),
+            'total_top_level_comments': len([c for c in all_comments if c.parent_id is None])
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        print(f"Error in get_post_comments: {e}")
+        return jsonify({'error': 'Failed to fetch comments'}), 500
 
 # New route: Get replies for a specific comment
 @main_bp.route('/comments/<int:comment_id>/replies', methods=['GET'])
@@ -208,10 +224,14 @@ def get_comment_thread(comment_id):
 
 # Update the get_posts route to include comment count..............//..
 @main_bp.route('/posts', methods=['GET'])
+@jwt_required(optional=True)  # Change to optional to handle both logged in and logged out users
 def get_posts():
     try:
         page = request.args.get('page', 1, type=int)
         per_page = request.args.get('per_page', 10, type=int)
+        
+        # Get current user ID if authenticated
+        current_user_id = get_jwt_identity()
         
         posts = Post.query.order_by(Post.created_at.desc()).paginate(
             page=page, per_page=per_page, error_out=False
@@ -221,6 +241,14 @@ def get_posts():
         for post in posts.items:
             total_comments = Comment.query.filter_by(post_id=post.id).count()
             top_level_comments_count = Comment.query.filter_by(post_id=post.id, parent_id=None).count()
+            
+            # Check if current user has liked this post
+            user_has_liked = False
+            if current_user_id:
+                user_has_liked = Like.query.filter_by(
+                    user_id=current_user_id, 
+                    post_id=post.id
+                ).first() is not None
             
             posts_data.append({
                 'id': post.id,
@@ -233,7 +261,7 @@ def get_posts():
                 'likes_count': len(post.likes),
                 'comments_count': total_comments,
                 'top_level_comments_count': top_level_comments_count,
-                'user_has_liked': False
+                'is_liked': user_has_liked  # Change from 'user_has_liked' to 'is_liked'
             })
         
         return jsonify({
@@ -245,7 +273,6 @@ def get_posts():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
     
 
 # ==========================
