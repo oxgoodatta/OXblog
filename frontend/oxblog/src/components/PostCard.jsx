@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'; // Added useEffect import
+import React, { useState, useEffect } from 'react';
 import { likesAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
@@ -8,15 +8,13 @@ const PostCard = ({ post, onDeleteClick }) => {
   const [isLiked, setIsLiked] = useState(post.is_liked || false);
   const [likesCount, setLikesCount] = useState(post.likes_count || 0);
 
-  // Add this useEffect to sync with post data on refresh
   useEffect(() => {
     if (post) {
       setIsLiked(post.is_liked || false);
       setLikesCount(post.likes_count || 0);
     }
-  }, [post?.is_liked, post?.likes_count]); // This will update when post data changes
+  }, [post?.is_liked, post?.likes_count]);
 
-  // Safe access to post properties with fallbacks
   const safePost = post || {};
   const postId = safePost.id || '';
   const content = safePost.content || '';
@@ -26,12 +24,16 @@ const PostCard = ({ post, onDeleteClick }) => {
   const createdAt = safePost.created_at ? new Date(safePost.created_at).toLocaleString() : 'Unknown date';
   const commentsCount = safePost.comments_count || 0;
 
+  // Get user initial for profile icon
+  const getUserInitial = () => {
+    return authorName.charAt(0).toUpperCase();
+  };
+
   const handleLike = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (!user) {
-      // Optional: redirect to login or show message
       alert('Please login to like posts');
       return;
     }
@@ -53,7 +55,6 @@ const PostCard = ({ post, onDeleteClick }) => {
     }
   };
 
-  // Don't render if post is invalid
   if (!post) {
     return null;
   }
@@ -61,13 +62,20 @@ const PostCard = ({ post, onDeleteClick }) => {
   return (
     <Link to={`/post/${postId}`} className="block hover:bg-gray-50 transition-colors duration-200">
       <div className='bg-gradient-to-r from-blue-50/50 to-transparent rounded-2xl p-2'>
-        <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border  border-gray-100 p-2 max-w-full  mx-auto">
+        <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-2 max-w-full mx-auto">
           <div className="flex justify-between items-start mb-3 gap-4">
-            <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-blue-600 truncate">@{authorName}</h3>
-              <p className="text-[10px] text-gray-500 ml-1">
-                {createdAt}
-              </p>
+            <div className="min-w-0 flex-1 flex items-center gap-3">
+              {/* Profile Icon - Simple addition */}
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                {getUserInitial()}
+              </div>
+              
+              <div>
+                <h3 className="font-semibold text-blue-600 truncate">@{authorName}</h3>
+                <p className="text-[10px] text-gray-500 ml-1">
+                  {createdAt}
+                </p>
+              </div>
             </div>
             
             {user && user.id === authorId && (

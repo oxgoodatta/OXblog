@@ -7,7 +7,7 @@ const DeleteModal = ({ isOpen, onConfirm, onCancel, isDeleting }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop with blur */}
       <div 
-        className="absolute inset-0  bg-opacity-90 backdrop-blur-sm transition-opacity"
+        className="absolute inset-0 bg-black/50 bg-opacity-90 backdrop-blur-sm transition-opacity"
         onClick={onCancel}
       />
       
@@ -33,14 +33,14 @@ const DeleteModal = ({ isOpen, onConfirm, onCancel, isDeleting }) => {
             <button
               onClick={onCancel}
               disabled={isDeleting}
-              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 font-medium disabled:opacity-50"
+              className="flex-1 px-4 cursor-pointer py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors duration-200 font-medium disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={onConfirm}
               disabled={isDeleting}
-              className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 cursor-pointer bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isDeleting ? (
                 <div className="flex items-center justify-center space-x-2">

@@ -1,17 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import PostCard from '../components/PostCard';
 import CommentForm from '../components/CommentForm';
+import DeleteModal from '../components/DeleteModal'; // Import DeleteModal
 import { postsAPI, commentsAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const PostDetail = () => {
   const { id } = useParams();
+  const navigate = useNavigate(); // Add navigate for redirect after delete
   const [post, setPost] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAllComments, setShowAllComments] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
+  const [deleteModal, setDeleteModal] = useState({ // Add delete modal state
+    isOpen: false,
+    postId: null,
+    isDeleting: false
+  });
   const { user } = useAuth();
 
   const COMMENTS_TO_SHOW = 3;
@@ -49,6 +56,37 @@ const PostDetail = () => {
 
   const handleCancelReply = () => {
     setReplyingTo(null);
+  };
+
+  // Add delete functionality similar to Home component
+  const handleDeleteClick = (postId) => {
+    setDeleteModal({
+      isOpen: true,
+      postId: postId,
+      isDeleting: false
+    });
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleteModal(prev => ({ ...prev, isDeleting: true }));
+    
+    try {
+      await postsAPI.deletePost(deleteModal.postId);
+      // Redirect to home after successful deletion
+      navigate('/');
+    } catch (error) {
+      console.error('Delete error:', error);
+      alert('Failed to delete post. Please try again.');
+      setDeleteModal(prev => ({ ...prev, isDeleting: false }));
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteModal({
+      isOpen: false,
+      postId: null,
+      isDeleting: false
+    });
   };
 
   // Get direct replies only (first level)
@@ -223,14 +261,15 @@ const PostDetail = () => {
       </Link>
 
       {/* Post Card */}
-      <div className="mb-8  flex  justify-center transform hover:scale-[1.01] transition-transform duration-300">
+      <div className="mb-8 flex justify-center transform hover:scale-[1.01] transition-transform duration-300">
         <div className='w-full'>
-          <PostCard post={post} onDeleteClick={() => {}} />
+          {/* Pass the actual delete handler instead of empty function */}
+          <PostCard post={post} onDeleteClick={handleDeleteClick} />
         </div>
       </div>
 
       {/* Comments Section */}
-      <div className="mb-8 ">
+      <div className="mb-8">
         {/* Comments Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
@@ -304,6 +343,14 @@ const PostDetail = () => {
           />
         </div>
       )}
+
+      {/* Add Delete Modal */}
+      <DeleteModal
+        isOpen={deleteModal.isOpen}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
+        isDeleting={deleteModal.isDeleting}
+      />
     </div>
   );
 };
