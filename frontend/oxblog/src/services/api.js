@@ -23,7 +23,25 @@ export const authAPI = {
 
 export const postsAPI = {
   getPosts: (page = 1) => api.get(`/posts?page=${page}&per_page=10`),
-  createPost: (content) => api.post('/posts', { content }),
+  createPost: (content, mediaFiles = []) => {
+    if (mediaFiles.length > 0) {
+      // Use FormData for file uploads
+      const formData = new FormData();
+      formData.append('content', content);
+      mediaFiles.forEach(file => {
+        formData.append('media', file);
+      });
+      
+      return api.post('/posts', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    } else {
+      // Regular JSON request for text-only posts
+      return api.post('/posts', { content });
+    }
+  },
   deletePost: (id) => api.delete(`/posts/${id}`),
 };
 

@@ -23,6 +23,7 @@ const PostCard = ({ post, onDeleteClick }) => {
   const authorId = author.id || '';
   const createdAt = safePost.created_at ? new Date(safePost.created_at).toLocaleString() : 'Unknown date';
   const commentsCount = safePost.comments_count || 0;
+  const media = safePost.media || [];
 
   // Get user initial for profile icon
   const getUserInitial = () => {
@@ -55,6 +56,92 @@ const PostCard = ({ post, onDeleteClick }) => {
     }
   };
 
+  const renderMedia = () => {
+  if (media.length === 0) return null;
+
+  return (
+    <div className={`mt-3 grid gap-2 ${
+      media.length === 1 ? 'grid-cols-1' : 
+      media.length === 2 ? 'grid-cols-2' : 
+      'grid-cols-2'
+    }`}>
+      {media.map((item, index) => (
+        <div key={item.id} className="relative">
+          {item.file_type === 'video' ? (
+            <video
+              controls
+              className="w-full h-48 object-cover rounded-lg bg-gray-100"
+              onError={(e) => {
+                console.error('Video failed to load:', {
+                  url: e.target.src,
+                  filename: item.filename,
+                  fileType: item.file_type
+                });
+              }}
+            >
+              <source 
+                src={`http://localhost:5000${item.url}`} 
+                type={`video/${getVideoType(item.filename)}`} 
+              />
+              Your browser does not support the video tag.
+            </video>
+          ) : (
+            <img
+              src={`http://localhost:5000${item.url}`}
+              alt="Post media"
+              className="w-full h-48 object-cover rounded-lg bg-gray-100"
+              loading="lazy"
+              onError={(e) => {
+                console.error('Image failed to load:', e.target.src);
+              }}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Helper function to get correct video type
+const getVideoType = (filename) => {
+  const ext = filename.split('.').pop().toLowerCase();
+  const videoTypes = {
+    'mp4': 'mp4',
+    'mov': 'mp4', // MOV files often use mp4 codec
+    'avi': 'x-msvideo',
+    'webm': 'webm',
+    'mkv': 'x-matroska'
+  };
+  return videoTypes[ext] || 'mp4'; // Default to mp4 if unknown
+};
+
+useEffect(() => {
+  if (media.length > 0) {
+    media.forEach((item, index) => {
+      if (item.file_type === 'video') {
+        console.log('Video details:', {
+          filename: item.filename,
+          url: item.url,
+          fullUrl: `http://localhost:5000${item.url}`,
+          extension: item.filename.split('.').pop(),
+          videoType: getVideoType(item.filename)
+        });
+      }
+    });
+  }
+}, [media]);
+
+  // Function to render content with proper emoji support
+  const renderContentWithEmojis = (text) => {
+    if (!text) return null;
+    
+    return (
+      <p className="text-gray-800 text-[14px] whitespace-pre-line break-words leading-relaxed mb-3">
+        {text}
+      </p>
+    );
+  };
+
   if (!post) {
     return null;
   }
@@ -65,7 +152,7 @@ const PostCard = ({ post, onDeleteClick }) => {
         <div className="bg-white min-w-[400px] rounded-xl shadow-sm hover:shadow-md transition-all duration-300 border border-gray-100 p-2 max-w-full mx-auto">
           <div className="flex justify-between items-start mb-3 gap-4">
             <div className="min-w-0 flex-1 flex items-center gap-3">
-              {/* Profile Icon - Simple addition */}
+              {/* Profile Icon */}
               <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
                 {getUserInitial()}
               </div>
@@ -89,9 +176,8 @@ const PostCard = ({ post, onDeleteClick }) => {
           </div>
 
           <div className="mb-1">
-            <p className="text-gray-800 text-[14px] whitespace-pre-line break-words leading-relaxed">
-              {content}
-            </p>
+            {content && renderContentWithEmojis(content)}
+            {renderMedia()}
           </div>
 
           <div className="flex items-center space-x-6 text-gray-600 pt-1 border-t border-gray-100">

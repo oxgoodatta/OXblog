@@ -1,25 +1,78 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app, send_from_directory  # Added send_from_directory
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app import db
-from app.models import Post, Like, User, Comment
+from app.models import Post, Like, User, Comment, PostMedia
 from datetime import datetime
+import os
+import uuid
+from werkzeug.utils import secure_filename
+from mimetypes import guess_type
+
 
 main_bp = Blueprint('main', __name__)
 
-# ... [keep all existing routes] ...
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in current_app.config['ALLOWED_EXTENSIONS']
+
+def get_file_type(filename):
+    ext = filename.rsplit('.', 1)[1].lower()
+    if ext in current_app.config['ALLOWED_IMAGE_EXTENSIONS']:
+        return 'image' if ext != 'gif' else 'gif'
+    elif ext in current_app.config['ALLOWED_VIDEO_EXTENSIONS']:
+        return 'video'
+    return 'unknown'
+
 @main_bp.route('/posts', methods=['POST'])
 @jwt_required()
 def create_post():
     try:
         user_id = get_jwt_identity()
-        data = request.get_json()
-        content = data.get('content')
         
-        if not content or len(content.strip()) == 0:
-            return jsonify({'error': 'Content cannot be empty'}), 400
+        # Check if it's form data (with files) or JSON
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            content = request.form.get('content', '')
+            files = request.files.getlist('media')
+        else:
+            data = request.get_json()
+            content = data.get('content', '')
+            files = []
         
-        post = Post(content=content.strip(), user_id=user_id)
+        if not content and not files:
+            return jsonify({'error': 'Post must contain content or media'}), 400
+        
+        # Create post
+        post = Post(content=content.strip() if content else '', user_id=user_id)
         db.session.add(post)
+        db.session.flush()  # Get the post ID
+        
+        # Handle file uploads
+        uploaded_media = []
+        for file in files:
+            if file and allowed_file(file.filename):
+                # Generate unique filename
+                file_ext = file.filename.rsplit('.', 1)[1].lower()
+                unique_filename = f"{uuid.uuid4().hex}.{file_ext}"
+                filename = secure_filename(unique_filename)
+                
+                # Save file
+                file_path = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+                file.save(file_path)
+                
+                # Create media record
+                media = PostMedia(
+                    filename=filename,
+                    file_type=get_file_type(file.filename),
+                    post_id=post.id
+                )
+                db.session.add(media)
+                uploaded_media.append({
+                    'id': media.id,
+                    'filename': media.filename,
+                    'file_type': media.file_type,
+                    'url': f"/api/uploads/{media.filename}"
+                })
+        
         db.session.commit()
 
         author = post.author
@@ -34,10 +87,12 @@ def create_post():
                     'id': author.id,
                     'username': author.username
                 },
+                'media': uploaded_media
             }
         }), 201
         
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
     
 @main_bp.route('/posts/<int:post_id>', methods=['DELETE'])
@@ -57,6 +112,29 @@ def delete_post(post_id):
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    
+
+# Add route to serve uploaded files
+@main_bp.route('/uploads/<filename>')
+def get_uploaded_file(filename):
+    try:
+        # Get the correct MIME type for the file
+        mimetype = guess_type(filename)[0]
+        
+        response = send_from_directory(
+            current_app.config['UPLOAD_FOLDER'], 
+            filename,
+            mimetype=mimetype
+        )
+        
+        # Add CORS headers for video files
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type')
+        
+        return response
+    except FileNotFoundError:
+        return jsonify({'error': 'File not found'}), 404
+
     
 
 @main_bp.route('/posts/<int:post_id>/like', methods=['POST'])
@@ -222,9 +300,9 @@ def get_comment_thread(comment_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-# Update the get_posts route to include comment count..............//..
+# Update the get_posts route to include media
 @main_bp.route('/posts', methods=['GET'])
-@jwt_required(optional=True)  # Change to optional to handle both logged in and logged out users
+@jwt_required(optional=True)
 def get_posts():
     try:
         page = request.args.get('page', 1, type=int)
@@ -250,6 +328,16 @@ def get_posts():
                     post_id=post.id
                 ).first() is not None
             
+            # Get media for post
+            media_data = []
+            for media in post.media:
+                media_data.append({
+                    'id': media.id,
+                    'filename': media.filename,
+                    'file_type': media.file_type,
+                    'url': f"/api/uploads/{media.filename}"
+                })
+            
             posts_data.append({
                 'id': post.id,
                 'content': post.content,
@@ -261,7 +349,8 @@ def get_posts():
                 'likes_count': len(post.likes),
                 'comments_count': total_comments,
                 'top_level_comments_count': top_level_comments_count,
-                'is_liked': user_has_liked  # Change from 'user_has_liked' to 'is_liked'
+                'is_liked': user_has_liked,
+                'media': media_data
             })
         
         return jsonify({

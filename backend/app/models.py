@@ -1,6 +1,7 @@
 from . import db
 from datetime import datetime
 import bcrypt
+import os
 from typing import List, Dict, Any, Optional
 
 class User(db.Model):
@@ -18,6 +19,13 @@ class User(db.Model):
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
+class PostMedia(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    filename = db.Column(db.String(255), nullable=False)
+    file_type = db.Column(db.String(50), nullable=False)  # 'image', 'video', 'gif'
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
@@ -25,6 +33,7 @@ class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     likes = db.relationship('Like', backref='post', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('Comment', backref='post', lazy=True, cascade='all, delete-orphan')
+    media = db.relationship('PostMedia', backref='post', lazy=True, cascade='all, delete-orphan')
 
 class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True)
