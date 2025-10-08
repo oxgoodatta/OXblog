@@ -71,11 +71,7 @@ function AppContent() {
             </PublicRoute>
           } />
           
-          <Route path="/profile" element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          } />
+          
 
           <Route path="/search" element={
             <ProtectedRoute>

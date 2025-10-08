@@ -83,16 +83,17 @@ const Navbar = () => {
             >
               <img src="/icons8-notification-48.png" alt="Notifications" className='w-6 h-6'/>
             </Link>
-
+            
             <Link
-              to="/profile"
+              to={user ? `/user/${user.username}` : '/login'}
               className={`p-2 rounded-md transition-colors duration-200 ${
-                isActive('/profile') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
+                location.pathname.startsWith('/user/') ? 'bg-blue-100 text-blue-600' : 'text-gray-700 hover:text-blue-600 hover:bg-gray-200'
               }`}
             >
               <img src="/icons8-profile-64.png" alt="Profile" className='w-6 h-6'/>
             </Link>
           </div>
+
 
           {/* Bottom Section - Logout */}
           <div className="flex flex-col items-center space-y-4">

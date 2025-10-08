@@ -4,6 +4,18 @@ import bcrypt
 import os
 from typing import List, Dict, Any, Optional
 
+class Follow(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    following_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (db.UniqueConstraint('follower_id', 'following_id', name='unique_follow'),)
+    
+    # Relationships
+    follower = db.relationship('User', foreign_keys=[follower_id], backref='following')
+    following = db.relationship('User', foreign_keys=[following_id], backref='followers')
+
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -13,12 +25,37 @@ class User(db.Model):
     posts = db.relationship('Post', backref='author', lazy=True, cascade='all, delete-orphan')
     comments = db.relationship('Comment', backref='author', lazy=True, cascade='all, delete-orphan')
     
+    # Add follow methods
+    def is_following(self, user):
+        return Follow.query.filter_by(follower_id=self.id, following_id=user.id).first() is not None
+    
+    def follow(self, user):
+        if not self.is_following(user):
+            follow = Follow(follower_id=self.id, following_id=user.id)
+            db.session.add(follow)
+            return True
+        return False
+    
+    def unfollow(self, user):
+        follow = Follow.query.filter_by(follower_id=self.id, following_id=user.id).first()
+        if follow:
+            db.session.delete(follow)
+            return True
+        return False
+    
+    def get_followers_count(self):
+        return Follow.query.filter_by(following_id=self.id).count()
+    
+    def get_following_count(self):
+        return Follow.query.filter_by(follower_id=self.id).count()
+    
     def set_password(self, password: str) -> None:
         self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     
     def check_password(self, password: str) -> bool:
         return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
+# ... rest of your existing models (PostMedia, Post, Like, Comment) remain the same ...
 class PostMedia(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     filename = db.Column(db.String(255), nullable=False)

@@ -161,23 +161,7 @@ def like_post(post_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@main_bp.route('/users/<username>', methods=['GET'])
-def get_user_profile(username):
-    try:
-        user = User.query.filter_by(username=username).first_or_404()
-        
-        user_data = {
-            'id': user.id,
-            'username': user.username,
-            'email': user.email,
-            'created_at': user.created_at.isoformat(),
-            'total_posts': len(user.posts)
-        }
-        
-        return jsonify({'user': user_data}), 200
-        
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+
     
 
 # Update the get_post_comments route to support threading
@@ -617,6 +601,175 @@ def search_posts():
             'total_pages': posts.pages,
             'current_page': page
         }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+
+# ==========================
+# Follow Routes
+# ==========================
+
+@main_bp.route('/users/<int:user_id>/follow', methods=['POST'])
+@jwt_required()
+def follow_user(user_id):
+    try:
+        current_user_id = get_jwt_identity()
+        
+        # Can't follow yourself
+        if current_user_id == user_id:
+            return jsonify({'error': 'Cannot follow yourself'}), 400
+        
+        user_to_follow = User.query.get_or_404(user_id)
+        current_user = User.query.get(current_user_id)
+        
+        if current_user.follow(user_to_follow):
+            db.session.commit()
+            
+            return jsonify({
+                'message': f'You are now following {user_to_follow.username}',
+                'following': True,
+                'followers_count': user_to_follow.get_followers_count(),
+                'following_count': current_user.get_following_count()
+            }), 200
+        else:
+            return jsonify({'error': 'Already following this user'}), 400
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/users/<int:user_id>/unfollow', methods=['POST'])
+@jwt_required()
+def unfollow_user(user_id):
+    try:
+        current_user_id = get_jwt_identity()
+        user_to_unfollow = User.query.get_or_404(user_id)
+        current_user = User.query.get(current_user_id)
+        
+        if current_user.unfollow(user_to_unfollow):
+            db.session.commit()
+            return jsonify({
+                'message': f'You have unfollowed {user_to_unfollow.username}',
+                'following': False,
+                'followers_count': user_to_unfollow.get_followers_count(),
+                'following_count': current_user.get_following_count()
+            }), 200
+        else:
+            return jsonify({'error': 'Not following this user'}), 400
+            
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/users/<int:user_id>/follow-status', methods=['GET'])
+@jwt_required()
+def get_follow_status(user_id):
+    try:
+        current_user_id = get_jwt_identity()
+        user = User.query.get_or_404(user_id)
+        current_user = User.query.get(current_user_id)
+        
+        return jsonify({
+            'is_following': current_user.is_following(user),
+            'followers_count': user.get_followers_count(),
+            'following_count': user.get_following_count()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/users/<int:user_id>/followers', methods=['GET'])
+def get_followers(user_id):
+    try:
+        user = User.query.get_or_404(user_id)
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        from app.models import Follow
+        followers = Follow.query.filter_by(following_id=user_id)\
+            .order_by(Follow.created_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        followers_data = []
+        for follow in followers.items:
+            followers_data.append({
+                'id': follow.follower.id,
+                'username': follow.follower.username,
+                'created_at': follow.follower.created_at.isoformat(),
+                'followed_at': follow.created_at.isoformat()
+            })
+        
+        return jsonify({
+            'followers': followers_data,
+            'total_followers': followers.total,
+            'total_pages': followers.pages,
+            'current_page': page
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/users/<int:user_id>/following', methods=['GET'])
+def get_following(user_id):
+    try:
+        user = User.query.get_or_404(user_id)
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 20, type=int)
+        
+        from app.models import Follow
+        following = Follow.query.filter_by(follower_id=user_id)\
+            .order_by(Follow.created_at.desc())\
+            .paginate(page=page, per_page=per_page, error_out=False)
+        
+        following_data = []
+        for follow in following.items:
+            following_data.append({
+                'id': follow.following.id,
+                'username': follow.following.username,
+                'created_at': follow.following.created_at.isoformat(),
+                'followed_at': follow.created_at.isoformat()
+            })
+        
+        return jsonify({
+            'following': following_data,
+            'total_following': following.total,
+            'total_pages': following.pages,
+            'current_page': page
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Update the user profile route to include follow counts
+@main_bp.route('/users/<username>', methods=['GET'])
+@jwt_required(optional=True)
+def get_user_profile(username):
+    try:
+        user = User.query.filter_by(username=username).first_or_404()
+        
+        # Get current user ID if authenticated for follow status
+        from flask_jwt_extended import get_jwt_identity
+        current_user_id = get_jwt_identity()
+        is_following = False
+        
+        if current_user_id:
+            current_user = User.query.get(current_user_id)
+            is_following = current_user.is_following(user)
+        
+        user_data = {
+            'id': user.id,
+            'username': user.username,
+            'email': user.email,
+            'created_at': user.created_at.isoformat(),
+            'total_posts': len(user.posts),
+            'followers_count': user.get_followers_count(),
+            'following_count': user.get_following_count(),
+            'is_following': is_following
+        }
+        
+        return jsonify({'user': user_data}), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

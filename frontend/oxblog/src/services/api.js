@@ -71,4 +71,27 @@ export const searchAPI = {
     api.get(`/search/posts?q=${encodeURIComponent(query)}&page=${page}&per_page=${per_page}`),
 };
 
+// Add Follow API functions
+export const followAPI = {
+  // Follow a user
+  followUser: (userId) => api.post(`/users/${userId}/follow`),
+  
+  // Unfollow a user
+  unfollowUser: (userId) => api.post(`/users/${userId}/unfollow`),
+  
+  // Get follow status and counts
+  getFollowStatus: (userId) => api.get(`/users/${userId}/follow-status`),
+  
+  // Get user's followers list
+  getFollowers: (userId, page = 1) => api.get(`/users/${userId}/followers?page=${page}`),
+  
+  // Get who user is following
+  getFollowing: (userId, page = 1) => api.get(`/users/${userId}/following?page=${page}`),
+};
+
+// Add User API functions (includes updated profile with follow counts)
+export const usersAPI = {
+  getUserProfile: (username) => api.get(`/users/${username}`),
+};
+
 export default api;
