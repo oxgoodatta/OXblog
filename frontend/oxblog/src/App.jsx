@@ -6,6 +6,8 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import SearchPage from './pages/SearchPage';
+import UserProfile from './pages/UserProfile';
 import PostDetail from './pages/PostDetail';
 import './App.css';
 
@@ -72,6 +74,18 @@ function AppContent() {
           <Route path="/profile" element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/search" element={
+            <ProtectedRoute>
+              <SearchPage />
+            </ProtectedRoute>
+          } />
+
+          <Route path="/user/:username" element={
+            <ProtectedRoute>
+              <UserProfile />
             </ProtectedRoute>
           } />
           

@@ -403,4 +403,220 @@ def delete_comment(comment_id):
 
     return jsonify({"message": "Comment deleted successfully"}), 200
 
-    
+# ==========================
+# Search Routes
+# ==========================
+
+@main_bp.route('/search', methods=['GET'])
+@jwt_required(optional=True)  # ADD THIS LINE
+def search():
+    """
+    Unified search endpoint that searches both users and posts
+    Query parameters:
+    - q: search query (required)
+    - type: 'all', 'users', or 'posts' (optional, default: 'all')
+    - page: page number for pagination (optional, default: 1)
+    - per_page: items per page (optional, default: 10)
+    """
+    try:
+        query = request.args.get('q', '').strip()
+        search_type = request.args.get('type', 'all')
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        if not query:
+            return jsonify({'error': 'Search query is required'}), 400
+        
+        if len(query) < 2:
+            return jsonify({'error': 'Search query must be at least 2 characters'}), 400
+        
+        results = {
+            'query': query,
+            'type': search_type,
+            'users': [],
+            'posts': []
+        }
+        
+        # Search users by username
+        if search_type in ['all', 'users']:
+            users = User.query.filter(
+                User.username.ilike(f'%{query}%')
+            ).order_by(User.username.asc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            
+            results['users'] = [{
+                'id': user.id,
+                'username': user.username,
+                'created_at': user.created_at.isoformat(),
+                'total_posts': len(user.posts)
+            } for user in users.items]
+            
+            results['users_total'] = users.total
+            results['users_pages'] = users.pages
+        
+        # Search posts by content
+        if search_type in ['all', 'posts']:
+            # Get current user ID if authenticated
+            current_user_id = get_jwt_identity()  # This requires @jwt_required(optional=True)
+            
+            posts = Post.query.filter(
+                Post.content.ilike(f'%{query}%')
+            ).order_by(Post.created_at.desc()).paginate(
+                page=page, per_page=per_page, error_out=False
+            )
+            
+            posts_data = []
+            for post in posts.items:
+                # Get current user ID if authenticated for like status
+                user_has_liked = False
+                if current_user_id:
+                    user_has_liked = Like.query.filter_by(
+                        user_id=current_user_id, 
+                        post_id=post.id
+                    ).first() is not None
+                
+                # Get media for post
+                media_data = []
+                for media in post.media:
+                    media_data.append({
+                        'id': media.id,
+                        'filename': media.filename,
+                        'file_type': media.file_type,
+                        'url': f"/api/uploads/{media.filename}"
+                    })
+                
+                posts_data.append({
+                    'id': post.id,
+                    'content': post.content,
+                    'created_at': post.created_at.isoformat(),
+                    'author': {
+                        'id': post.author.id,
+                        'username': post.author.username
+                    },
+                    'likes_count': len(post.likes),
+                    'comments_count': Comment.query.filter_by(post_id=post.id).count(),
+                    'is_liked': user_has_liked,
+                    'media': media_data
+                })
+            
+            results['posts'] = posts_data
+            results['posts_total'] = posts.total
+            results['posts_pages'] = posts.pages
+        
+        return jsonify(results), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/search/users', methods=['GET'])
+@jwt_required(optional=True)  # ADD THIS LINE
+def search_users():
+    """
+    Search only users by username
+    """
+    try:
+        query = request.args.get('q', '').strip()
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        if not query:
+            return jsonify({'error': 'Search query is required'}), 400
+        
+        if len(query) < 2:
+            return jsonify({'error': 'Search query must be at least 2 characters'}), 400
+        
+        users = User.query.filter(
+            User.username.ilike(f'%{query}%')
+        ).order_by(User.username.asc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        users_data = [{
+            'id': user.id,
+            'username': user.username,
+            'created_at': user.created_at.isoformat(),
+            'total_posts': len(user.posts)
+        } for user in users.items]
+        
+        return jsonify({
+            'query': query,
+            'users': users_data,
+            'total_users': users.total,
+            'total_pages': users.pages,
+            'current_page': page
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@main_bp.route('/search/posts', methods=['GET'])
+@jwt_required(optional=True)  # ADD THIS LINE
+def search_posts():
+    """
+    Search only posts by content
+    """
+    try:
+        query = request.args.get('q', '').strip()
+        page = request.args.get('page', 1, type=int)
+        per_page = request.args.get('per_page', 10, type=int)
+        
+        if not query:
+            return jsonify({'error': 'Search query is required'}), 400
+        
+        if len(query) < 2:
+            return jsonify({'error': 'Search query must be at least 2 characters'}), 400
+        
+        # Get current user ID if authenticated
+        current_user_id = get_jwt_identity()  # This requires @jwt_required(optional=True)
+        
+        posts = Post.query.filter(
+            Post.content.ilike(f'%{query}%')
+        ).order_by(Post.created_at.desc()).paginate(
+            page=page, per_page=per_page, error_out=False
+        )
+        
+        posts_data = []
+        for post in posts.items:
+            # Get current user ID if authenticated for like status
+            user_has_liked = False
+            if current_user_id:
+                user_has_liked = Like.query.filter_by(
+                    user_id=current_user_id, 
+                    post_id=post.id
+                ).first() is not None
+            
+            # Get media for post
+            media_data = []
+            for media in post.media:
+                media_data.append({
+                    'id': media.id,
+                    'filename': media.filename,
+                    'file_type': media.file_type,
+                    'url': f"/api/uploads/{media.filename}"
+                })
+            
+            posts_data.append({
+                'id': post.id,
+                'content': post.content,
+                'created_at': post.created_at.isoformat(),
+                'author': {
+                    'id': post.author.id,
+                    'username': post.author.username
+                },
+                'likes_count': len(post.likes),
+                'comments_count': Comment.query.filter_by(post_id=post.id).count(),
+                'is_liked': user_has_liked,
+                'media': media_data
+            })
+        
+        return jsonify({
+            'query': query,
+            'posts': posts_data,
+            'total_posts': posts.total,
+            'total_pages': posts.pages,
+            'current_page': page
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

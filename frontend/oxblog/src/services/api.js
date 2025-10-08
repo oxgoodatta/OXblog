@@ -56,4 +56,19 @@ export const likesAPI = {
   likePost: (postId) => api.post(`/posts/${postId}/like`),
 };
 
+// Add Search API functions
+export const searchAPI = {
+  // Unified search (users + posts)
+  searchAll: (query, type = 'all', page = 1, per_page = 10) => 
+    api.get(`/search?q=${encodeURIComponent(query)}&type=${type}&page=${page}&per_page=${per_page}`),
+  
+  // Search only users
+  searchUsers: (query, page = 1, per_page = 10) => 
+    api.get(`/search/users?q=${encodeURIComponent(query)}&page=${page}&per_page=${per_page}`),
+  
+  // Search only posts
+  searchPosts: (query, page = 1, per_page = 10) => 
+    api.get(`/search/posts?q=${encodeURIComponent(query)}&page=${page}&per_page=${per_page}`),
+};
+
 export default api;
